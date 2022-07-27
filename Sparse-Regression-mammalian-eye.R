@@ -21,3 +21,7 @@ y.train <- y[train_rows]
 y.test <- y[-train_rows]
 
 dim(X.train)
+
+# we should consider Boxplot, Histogram and D`ensity plot
+
+# we have to include at least these three methods: Ridge, Lasso and Elastic-Net Regression
