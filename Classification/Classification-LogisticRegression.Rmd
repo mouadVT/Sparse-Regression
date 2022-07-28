@@ -1,0 +1,117 @@
+
+Our Dataset for this project is going to be the Golub dataset. This dataset consists of 47 patients with Acute Lymphoblastic Leukemia (ALL) and 25 patients with acute yeloid leukemia (AML). Let's retrieve the dataset and understand the datatypes, dimension, etc.
+
+```{r}
+library(hdrm)
+downloadData(Golub1999)
+attachData(Golub1999)
+
+set.seed(1)
+
+n = nrow(X)
+# Split data into train and test sets
+train_rows <- sample(1:n, n/2)
+X.train <- X[train_rows, ]
+X.test <- X[-train_rows, ]
+
+y.train <- y[train_rows]
+y.test <- y[-train_rows]
+
+dim(X.train)
+```
+
+Logistic regression is not ideal in a p>>n setting. The weight estimates is usually skewed leading to an over-fitted model. Let's use regularization methods to help us with the overfitting problems. 
+
+```{r}
+lasso.mod = glmnet(X.train, y.train, alpha=1, family=binomial)
+cv.out <- cv.glmnet(X.train, y.train, alpha=1, family=binomial)
+```
+
+We use lasso for our regression. We use the package glmnet where altering the value of alpha and setting it equal to 1 gives us the model with lasso regression.
+
+```{r}
+plot(cv.out)
+```
+
+```{r}
+fit_plot <- cv.out$glmnet.fit
+
+plot(fit_plot, xvar="lambda")
+```
+
+Lasso regularization does both shrinkage and variable selection. 
+
+```{r}
+y.test = as.numeric(y.test)-1
+
+bestLambda_lasso_reg = cv.out$lambda.min
+lasso.pred = predict(lasso.mod, s = bestLambda_lasso_reg, newx = X.test, type="response")
+lasso.pred = as.numeric(lasso.pred>0.5)
+lasso.coef = predict(lasso.mod, type="coefficients", s=bestLambda_lasso_reg)
+mean_lasso = mean((lasso.pred-y.test)^2)
+mean_lasso
+```
+
+Using lasso the lowest lasso value that we're observing is 0.111
+
+```{r}
+length(lasso.coef[lasso.coef[,1]!=0,])
+```
+
+This model selects 13 variables.
+
+```{r}
+count = 0
+for(i in 1:length(lasso.pred)){
+  if(lasso.pred[i] == y.test[i]){
+    count = count + 1
+  }
+}
+print(paste("Number of correct classifications = ",count))
+```
+
+Now let's try to perform the saame set of analysis with ride as the regression method for our logistic regression model.
+
+```{r}
+ridge.mod = glmnet(X.train, y.train, alpha=0, family=binomial)
+cv.out <- cv.glmnet(X.train, y.train, alpha=0, family=binomial)
+```
+
+Let's plot the cross-validation output and see
+
+```{r}
+plot(cv.out)
+```
+
+```{r}
+fit_plot <- cv.out$glmnet.fit
+plot(fit_plot, xvar="lambda")
+```
+
+```{r}
+bestLambda_ridge_reg = cv.out$lambda.min
+ridge.pred = as.numeric(predict(ridge.mod, s=bestLambda_ridge_reg, newx = X.test, type="response")>0.5)
+mean((ridge.pred-y.test)^2)
+```
+We can see that the MSE value is 0.111 which is similar to lasso in the earlier analysis. As we know ridge doesn't bring the coefficients to zero which means there isn't a variable selection taking place. However, we can identify some important coefficients using some threshold value and filter out. 
+
+Let's try elastic net by varying the alpha value between 0 and 1
+
+```{r}
+length(y.train)
+alpha_arr <- c(0.1,0.3,0.5,0.7,0.9)
+
+for(alpha in alpha_arr){
+  elastic.mod = glmnet(X.train, y.train, alpha=alpha, family="binomial")
+  cv.out <- cv.glmnet(X.train, y.train, alpha=alpha, family="binomial")
+  
+  bestLambda_elastic_reg = cv.out$lambda.min
+  elastic.pred = as.numeric(predict(elastic.mod, s=bestLambda_elastic_reg, newx = X.test, type="response")>0.5)
+  print(paste("MSE is ",mean(elastic.pred-y.test)^2," for the alpha value = ",alpha))
+  
+  print(paste("The number of correctly classified items: ",36-sum(as.numeric(abs(elastic.pred-y.test)))))
+  
+}
+```
+
+
