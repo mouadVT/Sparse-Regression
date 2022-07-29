@@ -1,0 +1,70 @@
+
+We use tree based algorithms and compare trees, bagging and random forest using the Golub dataset and analyze its results
+
+```{r}
+library(tree)
+library(ISLR)
+library(randomForest)
+```
+
+Now that we've imported the required libraries, let's go ahead and do the test and train dataset split. We can also convert the vectors into dataframes.
+
+```{r}
+set.seed(1)
+main.df = data.frame(X,y)
+main.df$y <- as.factor(main.df$y)
+train.df <- main.df[train_rows, ]
+test.df <- main.df[-train_rows, ]
+```
+
+
+We now train the tree with the train dataset. There aren't many branches  due to sample selection and less number of observations
+
+```{r}
+tree.mod = tree(train.df$y~., train.df)
+
+plot(tree.mod)
+text(tree.mod, pretty = 0)
+tree.mod
+```
+
+```{r}
+tree.pred = predict(tree.mod, test.df, type="class")
+
+confusion_mat <- table(test.df$y, tree.pred)
+confusion_mat
+```
+
+Based on the above confusion matrix the accuracy will be
+
+```{r}
+accuracy <- sum(diag(confusion_mat))/sum(confusion_mat)
+accuracy
+```
+
+Next, we consider whether pruning the tree might lead to improved results. The function cv.tree() performs cross-validation in order to determine the optimal level of tree complexity; cost complexity pruning is used in order to select a sequence of trees for consideration. We use the argument FUN = prune.misclass in order to indicate that we want the classification error rate as our cost function to guide the cross-validation and pruning process, rather than the default for the cv.tree() function, which is deviance. The cv.tree() function reports the number of terminal nodes of each tree considered (size) as well as the corresponding error rate and the value of the cost-complexity parameter used
+
+```{r}
+prune.mod = cv.tree(tree.mod, FUN=prune.misclass)
+plot(prune.mod)
+```
+From the above plot we can identify that we have to set the parameter best = 2
+
+```{r}
+prune_r.mod = prune.misclass(tree.mod, best=2)
+plot(prune_r.mod)
+text(prune_r.mod, pretty=0)
+```
+
+```{r}
+prune.pred = predict(prune_r.mod, train.df, type="class")
+with(test.df, table(prune.pred, train.df$y))
+```
+
+```{r}
+confusion_prune <- table(test.df$y, prune.pred)
+confusion_prune
+accuracy <- sum(diag(confusion_prune)) / sum(confusion_prune)
+accuracy
+```
+
