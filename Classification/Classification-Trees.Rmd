@@ -46,8 +46,14 @@ Next, we consider whether pruning the tree might lead to improved results. The f
 
 ```{r}
 prune.mod = cv.tree(tree.mod, FUN=prune.misclass)
+prune.mod
+
+```
+```{r}
 plot(prune.mod)
 ```
+
+
 From the above plot we can identify that we have to set the parameter best = 2
 
 ```{r}
@@ -57,7 +63,7 @@ text(prune_r.mod, pretty=0)
 ```
 
 ```{r}
-prune.pred = predict(prune_r.mod, train.df, type="class")
+prune.pred = predict(prune_r.mod, test.df, type="class")
 with(test.df, table(prune.pred, train.df$y))
 ```
 
