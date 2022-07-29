@@ -40,17 +40,28 @@ plot(X, col= y)
 ```{r}
 hist(X, col = "green")
 ```
-# This data set consists of 47 patients with acute lymphoblastic leukemia (ALL) and 25 patients with acute myeloid leukemia (AML). Each of the 72 patients had bone marrow samples obtained at the time of diagnosis. Gene expression measurements for the samples were taken using Affymetrix Hgu6800 chips, resulting in 7129 measurements per patient.Of the two diseases, AML has a considerably worse prognosis: only 26% survive at least 5 years following diagnosis, compared to 68% for ALL. #Includ dimesions of the training and test data.
+# This data set consists of 47 patients with acute lymphoblastic leukemia (ALL) and 25 patients with acute myeloid leukemia (AML). Each of the 72 patients had bone marrow samples obtained at the time of diagnosis. Gene expression measurements for the samples were taken using Affymetrix Hgu6800 chips, resulting in 7129 measurements per patient.Of the two diseases, AML has a considerably worse prognosis: only 26% survive at least 5 years following diagnosis, compared to 68% for ALL.
 
 
 # Fit data into SVM
 ```{r}
 library(e1071)
 set.seed(1)
-y.train = as.numeric(y.train) - 1
-y.test = as.numeric(y.test)-1
-train_df = data.frame(x  = X.train, y = as.factor(y.train))
-test_df = data.frame(x  = X.test, y = as.factor(y.test))
-svm.fit <-  svm(y.train~., data = train_df , kernel = "radial", gamma = 1, cost = 1)
+dat=data.frame(x=X.train,y=as.factor(y.train))
+svmfit = svm(y.train~., data = dat , type = "C-classification" , kernel = "radial", gamma = 1, cost = 1)
+summary(svmfit)
+```
+
+```{r}
+plot(svmfit, data = dat)
+```
+
+
+
+```{r}
+# Extract the best model using tune() function
+out <-  tune(svm, y.train~., data = dat, kernel = "radial",ranges = list(cost = c(0.001, 0.01,1,10,100)))
+# extract the best model
+bestmod <- out$best.model
 ```
 
