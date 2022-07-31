@@ -73,4 +73,158 @@ confusion_prune
 accuracy <- sum(diag(confusion_prune)) / sum(confusion_prune)
 accuracy
 ```
+This validates our earlier hypothesis that this would not lead to an improvement due to the nature of the data. The accuracy does not improve at all. It remains the same at 0.8611
+
+Ensemble learning is an ML technique which combines several learning methods in order to produce one optimal model. In bagging each model is independently constructed using using a bootstrap sample of the dataset. Bagging helps 
+reduce variance and by extension prevent overfitting. We can take the value of mtry as 7129 as it is the number of predictors for this dataset. 
+Let the number of trees be 500 by default,
+
+```{r}
+
+set.seed(413)
+bagging.mod <- randomForest(train.df$y~., data=train.df, mtry = 7129, importance = TRUE)
+
+bagging.mod
+```
+
+```{r}
+bagging.pred = predict(bagging.mod, newdata=test.df)
+
+confusion_bagging <- table(test.df$y, bagging.pred)
+confusion_bagging
+```
+
+Now let's calculate the accuracy
+
+```{r}
+bagging_acc <- sum(diag(confusion_bagging)) / sum(confusion_bagging)
+bagging_acc
+```
+
+```{r}
+plot(bagging.pred, test.df$y)
+abline(0,1)
+```
+Whenever a split is considered in random forest, a random sample of m predictors are chosen. This is the reason behind the naming of random forest. We chose the mtry value as the square root of p. Hence mtry = 84. We also use tuneRF to determine the best mtry.
+
+It uses OOB error estimate to find the optimal mtry.
+
+```{r}
+set.seed(123)
+res <- tuneRF(train.df, train.df$y, stepFactor = 1.5)
+```
+
+In this case we observe the optimal m_try at 126. 
+
+```{r}
+set.seed(413)
+rf.mod = randomForest(train.df$y~., data=train.df, mtry=126, importance=TRUE)
+
+rf.mod
+```
+
+```{r}
+rf.pred = predict(rf.mod, newdata=test.df, type="class")
+
+confusion_mat <- table(rf.pred, test.df$y)
+confusion_mat
+```
+
+Calculating accuracy
+
+```{r}
+accuracy <- sum(diag(confusion_mat)) / sum(confusion_mat)
+accuracy
+```
+
+Now to compare bagging with random forest over a range of ntrees. Just like previously mtry would be equal to number of predictors to perform bagging and 126 for random forest.
+
+```{r}
+
+ntreeset = seq(10, 610, by=200)
+acc.bag = rep(0,length(ntreeset));acc.rf = rep(0,length(ntreeset))
+
+for(i in 1:length(ntreeset)){
+  nt = ntreeset[i]
+  bag.mod <- randomForest(train.df$y~., data=train.df, mtry=7129, ntree=nt, importance=TRUE)
+  bag.pred = predict(bag.mod, newdata=test.df)
+  confusion_bag <- table(test.df$y, bag.pred)
+  acc.bag[i] <- sum(diag(confusion_bag)) / sum(confusion_bag)
+  rf.mod = randomForest(train.df$y~., data=train.df, mtry=126, ntree = nt, importance=TRUE)
+  rf.pred = predict(rf.mod, newdata=test.df, type="class")
+  confusion_rf <- table(test.df$y, rf.pred)
+  acc.rf[i] <- sum(diag(confusion_rf)) / sum(confusion_rf)
+}
+
+
+```
+
+```{r}
+plot(ntreeset, acc.bag, type="l", col=2, ylim=c(0,1))
+lines(ntreeset, acc.rf, col=3)
+legend("bottomright", c("Bagging", "RF"), col=c(2,3), lty=c(1,1))
+```
+
+We plot the accuracy obtained at each iteration. From the plot we can see that bagging starts low and achieves a steady accuracy of 90%. Whereas RF is not worse but is still lesser than the bagging. Overall Bagging performs better than Random Forest in this case.
+
+Another iteration of bagging with random forest over a range of ntrees and a different mtry value, mtry is n=number of predictors to perform bagging, 84(square root), 189(second optimum), and 126(optimized by tuneRF) for random forest.
+
+```{r}
+ntreeset = seq(10,610,by=200)
+acc.bag = rep(0, length(ntreeset))
+acc.rf1 = rep(0, length(ntreeset))
+acc.rf2 = rep(0, length(ntreeset))
+acc.rf3 = rep(0, length(ntreeset))
+
+for(i in 1:length(ntreeset)){
+  
+  nt = ntreeset[i]
+  
+  print("Start")
+  bag.mod = randomForest(train.df$y~., data=train.df,mtry=7129,ntree=nt)
+  bag.pred = predict(bag.mod, newdata=test.df)
+  confusion_bag <- table(test.df$y, bag.pred)
+  acc.bag[i] <- sum(diag(confusion_bag)) / sum(confusion_bag)
+  print("After bag")
+  
+  rf1.mod = randomForest(train.df$y~., data=train.df, mtry=84, ntree=nt)
+  rf1.pred = predict(rf1.mod, newdata=test.df)
+  confusion_rf1 <- table(test.df$y, rf1.pred)
+  acc.rf1[i] <- sum(diag(confusion_rf1)) / sum(confusion_rf1)
+  print("After rf1")
+  
+  rf2.mod = randomForest(train.df$y~., data=train.df, mtry=126, ntree=nt)
+  rf2.pred = predict(rf2.mod, newdata=test.df)
+  confusion_rf2 <- table(test.df$y, rf2.pred)
+  acc.rf2[i] <- sum(diag(confusion_rf2)) / sum(confusion_rf2)
+  print("After rf2")
+  
+  rf3.mod = randomForest(train.df$y~., data=train.df, mtry=84, ntree=nt)
+  rf3.pred = predict(rf3.mod, newdata=test.df)
+  confusion_rf3 <- table(test.df$y, rf3.pred)
+  acc.rf3[i] <- sum(diag(confusion_rf3)) / sum(confusion_rf3)
+  print("After rf3")
+  
+}
+```
+
+```{r}
+acc.bag
+acc.rf1
+acc.rf2
+acc.rf3
+ntreeset
+```
+
+
+Let's plot the values
+
+```{r}
+plot(ntreeset, acc.bag, type="l", col=2, ylim=c(0,1))
+lines(ntreeset, acc.rf1, col=3)
+lines(ntreeset, acc.rf2, col=4)
+lines(ntreeset, acc.rf3, col=5)
+
+legend("bottomright", c("Bagging", "RF (m=84)", "RF (m=126)", "RF (m=189)"), col=c(2,3,4,5), lty=c(1,1,1,1))
+```
 
