@@ -6,7 +6,7 @@ library(hdrm)
 downloadData(Golub1999)
 attachData(Golub1999)
 
-set.seed(1)
+set.seed(2)
 
 n = nrow(X)
 # Split data into train and test sets
@@ -30,7 +30,7 @@ library(randomForest)
 Now that we've imported the required libraries, let's go ahead and do the test and train dataset split. We can also convert the vectors into dataframes.
 
 ```{r}
-set.seed(1)
+set.seed(2)
 main.df = data.frame(X,y)
 main.df$y <- as.factor(main.df$y)
 train.df <- main.df[train_rows, ]
@@ -101,7 +101,7 @@ Let the number of trees be 500 by default,
 
 ```{r}
 
-set.seed(413)
+set.seed(2)
 bagging.mod <- randomForest(train.df$y~., data=train.df, mtry = 7129, importance = TRUE)
 
 bagging.mod
@@ -130,15 +130,16 @@ Whenever a split is considered in random forest, a random sample of m predictors
 It uses OOB error estimate to find the optimal mtry.
 
 ```{r}
-set.seed(123)
+set.seed(2)
 res <- tuneRF(train.df, train.df$y, stepFactor = 1.5)
+res
 ```
 
-In this case we observe the optimal m_try at 126. 
+In this case we observe the optimal m_try at 84 
 
 ```{r}
-set.seed(413)
-rf.mod = randomForest(train.df$y~., data=train.df, mtry=126, importance=TRUE)
+set.seed(2)
+rf.mod = randomForest(train.df$y~., data=train.df, mtry=84, importance=TRUE)
 
 rf.mod
 ```
