@@ -2,6 +2,26 @@
 We use tree based algorithms and compare trees, bagging and random forest using the Golub dataset and analyze its results
 
 ```{r}
+library(hdrm)
+downloadData(Golub1999)
+attachData(Golub1999)
+
+set.seed(1)
+
+n = nrow(X)
+# Split data into train and test sets
+train_rows <- sample(1:n, n/2)
+X.train <- X[train_rows, ]
+X.test <- X[-train_rows, ]
+
+y.train <- y[train_rows]
+y.test <- y[-train_rows]
+
+dim(X.train)
+```
+
+
+```{r}
 library(tree)
 library(ISLR)
 library(randomForest)
@@ -227,4 +247,10 @@ lines(ntreeset, acc.rf3, col=5)
 
 legend("bottomright", c("Bagging", "RF (m=84)", "RF (m=126)", "RF (m=189)"), col=c(2,3,4,5), lty=c(1,1,1,1))
 ```
+To conclude, decision trees work well for the classification of high dimensional data but is not a good predictor due to increased variance. Decision trees are actually faster than bagging or random forest. They can be used for EDA but not so ideal for prediction.
 
+Bagging is a bit more complicated due to the high volume of 'p' variables. It had the best accuracy out of the four as per the above plot.
+
+Random Forest is not necessarily better when the mtry value is the square root of n. Using a tuning function tat reduced the OBB to find the optimal works better. Bagging had a better result than RF.
+
+The trees in RF are more independent of each other than bagging, making it suitable for predictive analysis. The dataset however has high number of variables compared to the number of observations which leads to a high variance problem. The reason is because bagging is used as a solution to high variance problem.
