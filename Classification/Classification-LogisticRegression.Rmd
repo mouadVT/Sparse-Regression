@@ -70,7 +70,11 @@ for(i in 1:length(lasso.pred)){
 print(paste("Number of correct classifications = ",count))
 ```
 
+<<<<<<< HEAD
 Now let's try to perform the same set of analysis with ride as the regression method for our logistic regression model.
+=======
+Now let's try to perform the same set of analysis with ridge as the regression method for our logistic regression model.
+>>>>>>> acd1e0ce5b0d021d45192135e93efdc3d33a042f
 
 ```{r}
 ridge.mod = glmnet(X.train, y.train, alpha=0, family=binomial)
@@ -104,6 +108,8 @@ alpha_arr <- c(0.1,0.3,0.5,0.7,0.9)
 for(alpha in alpha_arr){
   elastic.mod = glmnet(X.train, y.train, alpha=alpha, family="binomial")
   cv.out <- cv.glmnet(X.train, y.train, alpha=alpha, family="binomial")
+  
+  plot(cv.out$glmnet.fit, xvar="lambda")
   
   bestLambda_elastic_reg = cv.out$lambda.min
   elastic.pred = as.numeric(predict(elastic.mod, s=bestLambda_elastic_reg, newx = X.test, type="response")>0.5)
