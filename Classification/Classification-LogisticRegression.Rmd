@@ -70,7 +70,7 @@ for(i in 1:length(lasso.pred)){
 print(paste("Number of correct classifications = ",count))
 ```
 
-Now let's try to perform the saame set of analysis with ride as the regression method for our logistic regression model.
+Now let's try to perform the same set of analysis with ride as the regression method for our logistic regression model.
 
 ```{r}
 ridge.mod = glmnet(X.train, y.train, alpha=0, family=binomial)
