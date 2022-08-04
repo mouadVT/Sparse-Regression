@@ -149,7 +149,8 @@ print(all_moddel_2$best.model)
 ```
 
    
-     Based on the figures and numbers acquired above, we noticed that the kernel was the key factor that drives the model accuracy, where the model generated using the " linear" kernel outperforms all other kernel types. Sure enough, the same results were confirmed by the tune() function where the best model has a "C-classification" as SVM-Type, "linear" as SVM-Kernel, and a cost of 1, worth mentioning that this model used 31 support Vectors.  
+     Based on the figures and numbers acquired above, we noticed that the kernel was the key factor that drives the model accuracy, where the model generated using the " linear" kernel outperforms all other kernel types. Sure enough, the same results were confirmed by the tune() function where the best model has a "C-classification" as SVM-Type, "linear" as SVM-Kernel, and a cost of 1, worth mentioning that this model used 31 support Vectors. 
+     
    
 # Best Model
 ```{r}
