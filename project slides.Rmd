@@ -1,0 +1,162 @@
+---
+title: "Project"
+author: "Mouad & Monish"
+date: "`r Sys.Date()`"
+output:
+  beamer_presentation: default
+  powerpoint_presentation: default
+---
+---
+title: "SVM Classification"
+author: "Mouad & Monish"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+```{r}
+library(hdrm)
+library(e1071)
+downloadData(Golub1999)
+attachData(Golub1999)
+
+```
+## About the data set
+
+    Before we dig into numbers let's first understand the data. the Golub 1999 data set consists of 47 patients with Acute Lymphoblastic Leukemia also known as (ALL) which is a type of cancer in which the bone marrow makes too many white blood cells (lymphocytes), whereas the rest of the data consists of 25 patients with acute myeloid leukemia (AML) which is another type of blood cancer. 
+    
+    To better understand the data set we generated a handful of figures to illustrate the relationship among the observations. Since we are dealing with a tremendous data set, it would make no sense to go over each Feature/predictor, instead, We've managed to get the Correlation and Covariance of the data set, where each quantity provides a unique perspective about the Golub1999 data set. 
+    
+    For instance, we have used the cor() function that measures the correlation coefficient value in the data set. Also, we've utilized the cov() function / Covariance that measures linear relationships on the data set.
+
+
+
+
+```{r}
+set.seed(1)
+
+n = nrow(X)
+# Split data into train and test sets
+train_rows <- sample(1:n, n/2)
+X.train <- X[train_rows, ]
+X.test <- X[-train_rows, ]
+
+y.train <- y[train_rows]
+y.test <- y[-train_rows]
+
+y.train = as.numeric(y.train) - 1
+y.test = as.numeric(y.test)-1
+traindata = data.frame(x  = X.train, y = as.factor(y.train))
+testdata <- data.frame(z  = X.test, w = as.factor(y.test))
+dim(X)
+dim(X.train)
+dim(X.test)
+length(y.train)
+length(y.test)
+dim(testdata)
+
+
+```
+
+   
+     Basically, the golub1999 data set is a large matrix with 72 rows and 7129 columns, after the partition, we obtain a training data set with 36 rows and 7129 columns,  based on the training data set, we've been able to generate all necessary figures as well as the SVM-based models
+    
+
+
+
+```{r}
+
+plot(t(X), col= y)
+plot(y, col = "red")
+heatmap(cov(t(X)))
+heatmap(cor(t(X)))
+```
+   
+    
+    As you can see most of the figures show an exciting linear relationship among the Golub data set, which the Correlation and Covariance heatmap clearly indicates. In addition, the scatter plot of the transposed data also confirms the same pattern. 
+    
+    On the other hand, the histogram figure shows the distribution of the acute lymphoblastic leukemia (ALL) and acute myeloid leukemia (AML) diseases among the patients. 
+    
+    To further investigate the data set, we ran multiple sparse classification methods that would allow us to generate and compare their models and ultimately pick the best possible model.  
+
+##  SVM
+    
+    SVM  method has so much to offer in classifying and modeling the data. A key advantage of the SVM technique can be summed in four main points is:
+     1)  High performance with a good margin of separation between classes
+     2)  Effective in a high dimensional data set
+     3)  Suitable in cases where the number of dimensions is greater than the number of samples
+     4)  Memory efficient 
+     
+     In spite of its powerful capabilities, this tool does have some downsides, as follows:
+     1) not advisable for large data sets
+     2) Vulnerable to noises, which may lead target classes to overlap
+     3) An overabundance of features (predictors) leads to poor performance
+     
+     With these characteristics, the SMV method has so many influential parameters that are deeply involved in producing a well-fitted model, including but not limited to the chosen training data set, kernel, cost,... For the analysis' sake, we seeded the SVM method in our case with three different parameters besides the data: 
+     1) data:   Golub1999
+     2) kernel: Used in training and predicting(linear, polynomial, radial)
+     3) gamma:  Parameter needed for all kernels except linear
+     4) cost:  Cost of constraints violation "C" constant of the regularization
+     
+     These parameters would be enough to examine and experience the performance of each model.
+     
+     
+```{r}
+svm_model_1 = svm(y~., data = traindata , kernel = "radial", gamma = 1, cost = 1)
+svm_model_2 = svm(y~., data = traindata , kernel = "linear",  cost = 0.1)
+svm_model_3 = svm(y~., data = traindata , kernel = "polynomial", gamma = 1, cost = 10)
+#svm_model_4 = svm(y~., data = traindata , kernel = "radial", gamma = 1, cost = 20)
+#svm_model_5 = svm(y~., data = traindata , kernel = "radial", gamma = 1, cost = 15)
+```
+
+
+```{r}
+testdata = data.frame(x  = X.test, y = as.factor(y.test))
+table(predict(svm_model_1, newdata = testdata), y.test)
+table(predict(svm_model_2, newdata = testdata), y.test)
+table(predict(svm_model_3, newdata = testdata), y.test)
+```
+```{r}
+model_1_accuracy = (22)/(22+14)
+model_2_accuracy = (22+11)/(22+11+3)
+model_3_accuracy = (22)/(22+14)
+accuracy <- c(model_1_accuracy,model_2_accuracy,model_3_accuracy)
+print(accuracy)
+barplot(accuracy, main="models Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue","darkgreen"), names.arg=c("Model_1", "Model_2", "Model_3"),las = 2, cex.names=1)
+```
+
+
+```{r}
+# Extract the best model using tune() function
+all_moddel_1 <-  tune(svm, y~., data = traindata, kernel = "radial",ranges = list(cost = c(0.1,1,5)))
+all_moddel_2 <-  tune(svm, y~., data = traindata, kernel = "linear")
+table(predict(all_moddel_1$best.model, newdata = testdata), y.test)
+table(predict(all_moddel_2$best.model, newdata = testdata), y.test)
+```
+```{r}
+B_model_1_accuracy = (22+5)/(22+9+5)
+B_model_2_accuracy = (22+11)/(22+11+3)
+accuracy <- c(B_model_1_accuracy,B_model_2_accuracy)
+print(accuracy)
+barplot(accuracy, main="Models Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue"), names.arg=c("B_M_1", "B_M_2"),las = 2, cex.names=1)
+```
+
+
+```{r}
+print(all_moddel_1$best.model)
+print(all_moddel_2$best.model)
+
+```
+
+   
+     Based on the figures and numbers acquired above, we noticed that the kernel was the key factor that drives the model accuracy, where the model generated using the " linear" kernel outperforms all other kernel types. Sure enough, the same results were confirmed by the tune() function where the best model has a "C-classification" as SVM-Type, "linear" as SVM-Kernel, and a cost of 1, worth mentioning that this model used 31 support Vectors.  
+   
+# Best Model
+```{r}
+# We need the confusion matrix for the following
+# Logistic Demo
+#Decision Tree
+#Random Forest
+#Support Vector Machine
+```
+
