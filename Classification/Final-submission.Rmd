@@ -1,0 +1,550 @@
+---
+title: "DA - Final Project Report"
+author: "Monish Raj Raghu and Mouad Ait Taleb Ali"
+date: "5th Aug 2022"
+output:
+  html_document:
+    df_print: paged
+---
+# Project Report
+
+## Contributors
+
+1. Monish Raj Raghu (mailto:monishraj@vt.edu) (Worked on Logistic Regression and Trees-based algorithms)
+2. Mouad Ait Taleb Ali (mailto:mouad@vt.edu) (Worked on SVM and EDA)
+
+## Logistic Regression
+
+Our Dataset for this project is going to be the Golub dataset. This dataset consists of 47 patients with Acute Lymphoblastic Leukemia (ALL) and 25 patients with acute myeloid leukemia (AML). Let's retrieve the dataset and understand the datatypes, dimension, etc.
+
+```{r Splitting Train test}
+library(hdrm)
+downloadData(Golub1999)
+attachData(Golub1999)
+
+set.seed(1)
+
+n = nrow(X)
+# Split data into train and test sets
+train_rows <- sample(1:n, n/2)
+X.train <- X[train_rows, ]
+X.test <- X[-train_rows, ]
+
+y.train <- y[train_rows]
+y.test <- y[-train_rows]
+
+dim(X.train)
+```
+
+Logistic regression is not ideal in a p>>n setting. The weight estimates is usually skewed leading to an over-fitted model. Let's use regularization methods to help us with the overfitting problems. 
+
+```{r Lasso with glmnet}
+lasso.mod = glmnet(X.train, y.train, alpha=1, family=binomial)
+cv.out <- cv.glmnet(X.train, y.train, alpha=1, family=binomial)
+```
+
+We use lasso for our regression. We use the package glmnet where altering the value of alpha and setting it equal to 1 gives us the model with lasso regression.
+
+```{r plot the CV output with lasso}
+plot(cv.out)
+```
+
+```{r plot of Coefficients with Lasso}
+fit_plot <- cv.out$glmnet.fit
+
+plot(fit_plot, xvar="lambda")
+```
+
+Lasso regularization does both shrinkage and variable selection. 
+
+```{r MSE calculation for Lasso}
+y.test = as.numeric(y.test)-1
+
+bestLambda_lasso_reg = cv.out$lambda.min
+lasso.pred = predict(lasso.mod, s = bestLambda_lasso_reg, newx = X.test, type="response")
+lasso.pred = as.numeric(lasso.pred>0.5)
+lasso.coef = predict(lasso.mod, type="coefficients", s=bestLambda_lasso_reg)
+mean_lasso = mean((lasso.pred-y.test)^2)
+mean_lasso
+```
+
+Using lasso the lowest lasso value that we're observing is 0.111
+
+```{r Variable selection count}
+length(lasso.coef[lasso.coef[,1]!=0,])
+```
+
+This model selects 13 variables.
+
+```{r No. of correct predictions}
+count = 0
+for(i in 1:length(lasso.pred)){
+  if(lasso.pred[i] == y.test[i]){
+    count = count + 1
+  }
+}
+print(paste("Number of correct classifications = ",count))
+```
+
+
+Now let's try to perform the same set of analysis with ridge as the regression method for our logistic regression model.
+
+```{r ridge using glmnet}
+ridge.mod = glmnet(X.train, y.train, alpha=0, family=binomial)
+cv.out <- cv.glmnet(X.train, y.train, alpha=0, family=binomial)
+```
+
+Let's plot the cross-validation output and see
+
+```{r Plotting the cv.out}
+plot(cv.out)
+```
+
+```{r Coefficients plotting using ridge}
+fit_plot <- cv.out$glmnet.fit
+plot(fit_plot, xvar="lambda")
+```
+
+```{r MSE calculation for ridge}
+bestLambda_ridge_reg = cv.out$lambda.min
+ridge.pred = as.numeric(predict(ridge.mod, s=bestLambda_ridge_reg, newx = X.test, type="response")>0.5)
+mean((ridge.pred-y.test)^2)
+```
+We can see that the MSE value is 0.111 which is similar to lasso in the earlier analysis. As we know ridge doesn't bring the coefficients to zero which means there isn't a variable selection taking place. However, we can identify some important coefficients using some threshold value and filter out. 
+
+Let's try elastic net by varying the alpha value between 0 and 1
+
+```{r ElasticNet using glmnet}
+length(y.train)
+alpha_arr <- c(0.1,0.3,0.5,0.7,0.9)
+
+for(alpha in alpha_arr){
+  elastic.mod = glmnet(X.train, y.train, alpha=alpha, family="binomial")
+  cv.out <- cv.glmnet(X.train, y.train, alpha=alpha, family="binomial")
+  
+  plot(cv.out$glmnet.fit, xvar="lambda")
+  
+  bestLambda_elastic_reg = cv.out$lambda.min
+  elastic.pred = as.numeric(predict(elastic.mod, s=bestLambda_elastic_reg, newx = X.test, type="response")>0.5)
+  print(paste("MSE is ",mean(elastic.pred-y.test)^2," for the alpha value = ",alpha))
+  
+  print(paste("The number of correctly classified items: ",36-sum(as.numeric(abs(elastic.pred-y.test)))))
+  
+}
+```
+
+## Tree-based algorithms
+
+
+We use tree based algorithms and compare trees, bagging and random forest using the Golub dataset and analyze its results
+
+```{r Splitting the dataset}
+library(hdrm)
+downloadData(Golub1999)
+attachData(Golub1999)
+
+set.seed(2)
+
+n = nrow(X)
+# Split data into train and test sets
+train_rows <- sample(1:n, n/2)
+X.train <- X[train_rows, ]
+X.test <- X[-train_rows, ]
+
+y.train <- y[train_rows]
+y.test <- y[-train_rows]
+
+dim(X.train)
+```
+
+
+```{r Importing tree-based libraries}
+library(tree)
+library(ISLR)
+library(randomForest)
+```
+
+Now that we've imported the required libraries, let's go ahead and do the test and train dataset split. We can also convert the vectors into dataframes.
+
+```{r Test-train split}
+set.seed(2)
+main.df = data.frame(X,y)
+main.df$y <- as.factor(main.df$y)
+train.df <- main.df[train_rows, ]
+test.df <- main.df[-train_rows, ]
+```
+
+
+We now train the tree with the train dataset. There aren't many branches  due to sample selection and less number of observations
+
+```{r Using tree() method}
+tree.mod = tree(train.df$y~., train.df)
+
+plot(tree.mod)
+text(tree.mod, pretty = 0)
+tree.mod
+```
+
+```{r}
+tree.pred = predict(tree.mod, test.df, type="class")
+
+confusion_mat <- table(test.df$y, tree.pred)
+confusion_mat
+```
+
+Based on the above confusion matrix the accuracy will be
+
+```{r}
+accuracy <- sum(diag(confusion_mat))/sum(confusion_mat)
+accuracy
+```
+
+Next, we consider whether pruning the tree might lead to improved results. The function cv.tree() performs cross-validation in order to determine the optimal level of tree complexity; cost complexity pruning is used in order to select a sequence of trees for consideration. We use the argument FUN = prune.misclass in order to indicate that we want the classification error rate as our cost function to guide the cross-validation and pruning process, rather than the default for the cv.tree() function, which is deviance. The cv.tree() function reports the number of terminal nodes of each tree considered (size) as well as the corresponding error rate and the value of the cost-complexity parameter used
+
+```{r}
+prune.mod = cv.tree(tree.mod, FUN=prune.misclass)
+prune.mod
+
+```
+```{r}
+plot(prune.mod)
+```
+
+
+From the above plot we can identify that we have to set the parameter best = 2
+
+```{r}
+prune_r.mod = prune.misclass(tree.mod, best=2)
+plot(prune_r.mod)
+text(prune_r.mod, pretty=0)
+```
+
+```{r}
+prune.pred = predict(prune_r.mod, test.df, type="class")
+with(test.df, table(prune.pred, train.df$y))
+```
+
+```{r}
+confusion_prune <- table(test.df$y, prune.pred)
+confusion_prune
+accuracy <- sum(diag(confusion_prune)) / sum(confusion_prune)
+accuracy
+```
+This validates our earlier hypothesis that this would not lead to an improvement due to the nature of the data. The accuracy does not improve at all. It remains the same at 0.8611
+
+Ensemble learning is an ML technique which combines several learning methods in order to produce one optimal model. In bagging each model is independently constructed using using a bootstrap sample of the dataset. Bagging helps 
+reduce variance and by extension prevent overfitting. We can take the value of mtry as 7129 as it is the number of predictors for this dataset. 
+Let the number of trees be 500 by default,
+
+```{r}
+
+set.seed(2)
+bagging.mod <- randomForest(train.df$y~., data=train.df, mtry = 7129, importance = TRUE)
+
+bagging.mod
+```
+
+```{r}
+bagging.pred = predict(bagging.mod, newdata=test.df)
+
+confusion_bagging <- table(test.df$y, bagging.pred)
+confusion_bagging
+```
+
+Now let's calculate the accuracy
+
+```{r}
+bagging_acc <- sum(diag(confusion_bagging)) / sum(confusion_bagging)
+bagging_acc
+```
+
+```{r}
+plot(bagging.pred, test.df$y)
+abline(0,1)
+```
+
+Whenever a split is considered in random forest, a random sample of m predictors are chosen. This is the reason behind the naming of random forest. We chose the mtry value as the square root of p. Hence mtry = 84. We also use tuneRF to determine the best mtry.
+
+It uses OOB error estimate to find the optimal mtry.
+
+```{r}
+set.seed(2)
+res <- tuneRF(train.df, train.df$y, stepFactor = 1.5)
+res
+```
+
+In this case we observe the optimal m_try at 84 
+
+```{r}
+set.seed(2)
+rf.mod = randomForest(train.df$y~., data=train.df, mtry=84, importance=TRUE)
+
+rf.mod
+```
+
+```{r}
+rf.pred = predict(rf.mod, newdata=test.df, type="class")
+
+confusion_mat <- table(rf.pred, test.df$y)
+confusion_mat
+```
+
+Calculating accuracy
+
+```{r}
+accuracy <- sum(diag(confusion_mat)) / sum(confusion_mat)
+accuracy
+```
+
+Now to compare bagging with random forest over a range of ntrees. Just like previously mtry would be equal to number of predictors to perform bagging and 126 for random forest.
+
+```{r}
+
+ntreeset = seq(10, 610, by=200)
+acc.bag = rep(0,length(ntreeset));acc.rf = rep(0,length(ntreeset))
+
+for(i in 1:length(ntreeset)){
+  nt = ntreeset[i]
+  bag.mod <- randomForest(train.df$y~., data=train.df, mtry=7129, ntree=nt, importance=TRUE)
+  bag.pred = predict(bag.mod, newdata=test.df)
+  confusion_bag <- table(test.df$y, bag.pred)
+  acc.bag[i] <- sum(diag(confusion_bag)) / sum(confusion_bag)
+  rf.mod = randomForest(train.df$y~., data=train.df, mtry=126, ntree = nt, importance=TRUE)
+  rf.pred = predict(rf.mod, newdata=test.df, type="class")
+  confusion_rf <- table(test.df$y, rf.pred)
+  acc.rf[i] <- sum(diag(confusion_rf)) / sum(confusion_rf)
+}
+
+
+```
+
+```{r}
+plot(ntreeset, acc.bag, type="l", col=2, ylim=c(0,1))
+lines(ntreeset, acc.rf, col=3)
+legend("bottomright", c("Bagging", "RF"), col=c(2,3), lty=c(1,1))
+```
+
+We plot the accuracy obtained at each iteration. From the plot we can see that bagging starts low and achieves a steady accuracy of 90%. Whereas RF is not worse but is still lesser than the bagging. Overall Bagging performs better than Random Forest in this case.
+
+Another iteration of bagging with random forest over a range of ntrees and a different mtry value, mtry is n=number of predictors to perform bagging, 84(square root), 189(second optimum), and 126(optimized by tuneRF) for random forest.
+
+```{r}
+ntreeset = seq(10,610,by=200)
+acc.bag = rep(0, length(ntreeset))
+acc.rf1 = rep(0, length(ntreeset))
+acc.rf2 = rep(0, length(ntreeset))
+acc.rf3 = rep(0, length(ntreeset))
+
+for(i in 1:length(ntreeset)){
+  
+  nt = ntreeset[i]
+  
+  print("Start")
+  bag.mod = randomForest(train.df$y~., data=train.df,mtry=7129,ntree=nt)
+  bag.pred = predict(bag.mod, newdata=test.df)
+  confusion_bag <- table(test.df$y, bag.pred)
+  acc.bag[i] <- sum(diag(confusion_bag)) / sum(confusion_bag)
+  print("After bag")
+  
+  rf1.mod = randomForest(train.df$y~., data=train.df, mtry=84, ntree=nt)
+  rf1.pred = predict(rf1.mod, newdata=test.df)
+  confusion_rf1 <- table(test.df$y, rf1.pred)
+  acc.rf1[i] <- sum(diag(confusion_rf1)) / sum(confusion_rf1)
+  print("After rf1")
+  
+  rf2.mod = randomForest(train.df$y~., data=train.df, mtry=126, ntree=nt)
+  rf2.pred = predict(rf2.mod, newdata=test.df)
+  confusion_rf2 <- table(test.df$y, rf2.pred)
+  acc.rf2[i] <- sum(diag(confusion_rf2)) / sum(confusion_rf2)
+  print("After rf2")
+  
+  rf3.mod = randomForest(train.df$y~., data=train.df, mtry=84, ntree=nt)
+  rf3.pred = predict(rf3.mod, newdata=test.df)
+  confusion_rf3 <- table(test.df$y, rf3.pred)
+  acc.rf3[i] <- sum(diag(confusion_rf3)) / sum(confusion_rf3)
+  print("After rf3")
+  
+}
+```
+
+```{r}
+acc.bag
+acc.rf1
+acc.rf2
+acc.rf3
+ntreeset
+```
+
+
+Let's plot the values
+
+```{r}
+plot(ntreeset, acc.bag, type="l", col=2, ylim=c(0,1))
+lines(ntreeset, acc.rf1, col=3)
+lines(ntreeset, acc.rf2, col=4)
+lines(ntreeset, acc.rf3, col=5)
+
+legend("bottomright", c("Bagging", "RF (m=84)", "RF (m=126)", "RF (m=189)"), col=c(2,3,4,5), lty=c(1,1,1,1))
+```
+To conclude, decision trees work well for the classification of high dimensional data but is not a good predictor due to increased variance. Decision trees are actually faster than bagging or random forest. They can be used for EDA but not so ideal for prediction.
+
+Bagging is a bit more complicated due to the high volume of 'p' variables. It had the best accuracy out of the four as per the above plot.
+
+Random Forest is not necessarily better when the mtry value is the square root of n. Using a tuning function tat reduced the OBB to find the optimal works better. Bagging had a better result than RF.
+
+The trees in RF are more independent of each other than bagging, making it suitable for predictive analysis. The dataset however has high number of variables compared to the number of observations which leads to a high variance problem. The reason is because bagging is used as a solution to high variance problem.
+
+
+## SVM
+
+
+
+```{r}
+library(hdrm)
+library(e1071)
+downloadData(Golub1999)
+attachData(Golub1999)
+
+```
+## About the data set
+
+    Before we dig into numbers let's first understand the data. the Golub 1999 data set consists of 47 patients with Acute Lymphoblastic Leukemia also known as (ALL) which is a type of cancer in which the bone marrow makes too many white blood cells (lymphocytes), whereas the rest of the data consists of 25 patients with acute myeloid leukemia (AML) which is another type of blood cancer. 
+    
+    To better understand the data set we generated a handful of figures to illustrate the relationship among the observations. Since we are dealing with a tremendous data set, it would make no sense to go over each Feature/predictor, instead, We've managed to get the Correlation and Covariance of the data set, where each quantity provides a unique perspective about the Golub1999 data set. 
+    
+    For instance, we have used the cor() function that measures the correlation coefficient value in the data set. Also, we've utilized the cov() function / Covariance that measures linear relationships on the data set.
+
+
+
+
+```{r}
+set.seed(1)
+
+n = nrow(X)
+# Split data into train and test sets
+train_rows <- sample(1:n, n/2)
+X.train <- X[train_rows, ]
+X.test <- X[-train_rows, ]
+
+y.train <- y[train_rows]
+y.test <- y[-train_rows]
+
+y.train = as.numeric(y.train) - 1
+y.test = as.numeric(y.test)-1
+traindata = data.frame(x  = X.train, y = as.factor(y.train))
+testdata <- data.frame(z  = X.test, w = as.factor(y.test))
+dim(X)
+dim(X.train)
+dim(X.test)
+length(y.train)
+length(y.test)
+dim(testdata)
+
+
+```
+
+   
+     Basically, the golub1999 data set is a large matrix with 72 rows and 7129 columns, after the partition, we obtain a training data set with 36 rows and 7129 columns,  based on the training data set, we've been able to generate all necessary figures as well as the SVM-based models
+    
+
+
+
+```{r}
+
+plot(t(X), col= y, main="Scatter plot of Golub data set")
+plot(y, col = "darkblue", main="Patients Distribution")
+heatmap(cov(t(X)),Rowv = NA, Colv = NA,  main = "Covariance")
+heatmap(cor(t(X)),Rowv = NA, Colv = NA, main = "Correlation")
+```
+   
+    
+    As you can see most of the figures show an exciting linear relationship among the Golub data set, which the Correlation and Covariance heatmap clearly indicates. In addition, the scatter plot of the transposed data also confirms the same pattern. 
+    
+    On the other hand, the histogram figure shows the distribution of the acute lymphoblastic leukemia (ALL) and acute myeloid leukemia (AML) diseases among the patients. 
+    
+    To further investigate the data set, we ran multiple sparse classification methods that would allow us to generate and compare their models and ultimately pick the best possible model.  
+
+##  SVM
+    
+    SVM  method has so much to offer in classifying and modeling the data. A key advantage of the SVM technique can be summed in four main points is:
+     1)  High performance with a good margin of separation between classes
+     2)  Effective in a high dimensional data set
+     3)  Suitable in cases where the number of dimensions is greater than the number of samples
+     4)  Memory efficient 
+     
+     In spite of its powerful capabilities, this tool does have some downsides, as follows:
+     1) not advisable for large data sets
+     2) Vulnerable to noises, which may lead target classes to overlap
+     3) An overabundance of features (predictors) leads to poor performance
+     
+     With these characteristics, the SMV method has so many influential parameters that are deeply involved in producing a well-fitted model, including but not limited to the chosen training data set, kernel, cost,... For the analysis' sake, we seeded the SVM method in our case with three different parameters besides the data: 
+     1) data:   Golub1999
+     2) kernel: Used in training and predicting(linear, polynomial, radial)
+     3) gamma:  Parameter needed for all kernels except linear
+     4) cost:  Cost of constraints violation "C" constant of the regularization
+     
+     These parameters would be enough to examine and experience the performance of each model.
+     
+     
+```{r}
+svm_model_1 = svm(y~., data = traindata , kernel = "radial", gamma = 1, cost = 1)
+svm_model_2 = svm(y~., data = traindata , kernel = "linear",  cost = 0.1)
+svm_model_3 = svm(y~., data = traindata , kernel = "polynomial", gamma = 1, cost = 10)
+
+```
+
+
+
+```{r}
+testdata = data.frame(x  = X.test, y = as.factor(y.test))
+confusion_mtrx_1 <- table(predict(svm_model_1, newdata = testdata), y.test)
+confusion_mtrx_2 <- table(predict(svm_model_2, newdata = testdata), y.test)
+confusion_mtrx_3 <- table(predict(svm_model_3, newdata = testdata), y.test)
+model_1_accuracy = sum(diag(confusion_mtrx_1))/sum(confusion_mtrx_1)
+model_2_accuracy = sum(diag(confusion_mtrx_2))/sum(confusion_mtrx_2)
+model_3_accuracy = sum(diag(confusion_mtrx_3))/sum(confusion_mtrx_3)
+accuracy <- c(model_1_accuracy,model_2_accuracy,model_3_accuracy)
+print(accuracy)
+barplot(accuracy, main="models Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue","darkgreen"), names.arg=c("Model_1", "Model_2", "Model_3"),las = 2, cex.names=1)
+```
+
+
+```{r}
+# Extract the best model using tune() function
+all_moddels_1 <-  tune(svm, y~., data = traindata, kernel = "radial",ranges = list(cost = c(0.1,1,5)))
+all_moddels_2 <-  tune(svm, y~., data = traindata, kernel = "linear")
+all_moddels_3 <-  tune(svm, y~., data = traindata, kernel = "polynomial")
+confusion_mtrx_all_Ms_1 <- table(predict(all_moddels_1$best.model, newdata = testdata), y.test)
+confusion_mtrx_all_Ms_2 <- table(predict(all_moddels_2$best.model, newdata = testdata), y.test)
+confusion_mtrx_all_Ms_3 <- table(predict(all_moddels_3$best.model, newdata = testdata), y.test)
+```
+
+
+```{r}
+B_model_1_accuracy = sum(diag(confusion_mtrx_all_Ms_1))/sum(confusion_mtrx_all_Ms_1)
+B_model_2_accuracy = sum(diag(confusion_mtrx_all_Ms_2))/sum(confusion_mtrx_all_Ms_2)
+B_model_3_accuracy = sum(diag(confusion_mtrx_all_Ms_3))/sum(confusion_mtrx_all_Ms_3)
+accuracy <- c(B_model_1_accuracy,B_model_2_accuracy,B_model_3_accuracy)
+print(accuracy)
+barplot(accuracy, main="Models Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue", "darkgreen"), names.arg=c("Radial", "Linear", "Polyno"),las = 2, cex.names=1)
+```
+
+
+```{r}
+print(all_moddels_1$best.model)
+print(all_moddels_2$best.model)
+print(all_moddels_3$best.model)
+
+```
+
+   
+     Based on the figures and numbers acquired above, we noticed that the kernel was the key factor that drives the model accuracy, where the model with a " linear" kernel outperforms all other models. Sure enough, the same results were confirmed by the tune() function where the best model has a "C-classification" as SVM-Type, "linear" as SVM-Kernel, and a cost of 1, worth mentioning that this model used 31 support Vectors.  
+  
+  
+## Conclusion
+
+By combining the accuracies obtained from the different models on our test dataset the below accuracies are obtained,
+
+Logistic regression with ElasticNet regularization: 91.667%
+Bagging (Trees) : 94.44%
+SVM (Linear Kernel): 91.667%
