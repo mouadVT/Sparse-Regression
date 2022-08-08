@@ -194,6 +194,7 @@ for(alpha in alpha_arr){
   print(paste("The number of correctly classified items: ",36-sum(as.numeric(abs(elastic.pred-y.test)))))
   
 }
+acc_logistic <- 33/36
 ```
 
 ## Tree-based algorithms
@@ -527,7 +528,7 @@ print(all_moddels_3$best.model)
   
 ## Conclusion
 ```{r}
-accuracies <- c( ,bagging_acc,B_model_2_accuracy)
+accuracies <- c(acc_logistic ,bagging_acc,B_model_2_accuracy)
 barplot(accuracies, main="Method Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","darkblue", "darkgreen"), names.arg=c("Logistic", "Trees", "SVM"),las = 2, cex.names=1)
 ```
 
