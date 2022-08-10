@@ -490,15 +490,15 @@ model_2_accuracy = sum(diag(confusion_mtrx_2))/sum(confusion_mtrx_2)
 model_3_accuracy = sum(diag(confusion_mtrx_3))/sum(confusion_mtrx_3)
 accuracy <- c(model_1_accuracy,model_2_accuracy,model_3_accuracy)
 print(accuracy)
-barplot(accuracy, main="models Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue","darkgreen"), names.arg=c("Model_1", "Model_2", "Model_3"),las = 2, cex.names=1)
+barplot(accuracy, main="model Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue","darkgreen"), names.arg=c("Model_1", "Model_2", "Model_3"),las = 2, cex.names=1)
 ```
 
 
 ```{r}
 # Extract the best model using tune() function
-all_moddels_1 <-  tune(svm, y~., data = traindata, kernel = "radial",ranges = list(cost = c(0.1,1,5)))
-all_moddels_2 <-  tune(svm, y~., data = traindata, kernel = "linear")
-all_moddels_3 <-  tune(svm, y~., data = traindata, kernel = "polynomial")
+all_moddels_1 <-  tune(svm, y~., data = traindata, kernel = "radial",ranges = list(cost = c(0.1,1,5,10)))
+all_moddels_2 <-  tune(svm, y~., data = traindata, kernel = "linear",ranges = list(cost = c(0.1,1,5,10)))
+all_moddels_3 <-  tune(svm, y~., data = traindata, kernel = "polynomial",ranges = list(cost = c(0.1,1,5,10)))
 confusion_mtrx_all_Ms_1 <- table(predict(all_moddels_1$best.model, newdata = testdata), y.test)
 confusion_mtrx_all_Ms_2 <- table(predict(all_moddels_2$best.model, newdata = testdata), y.test)
 confusion_mtrx_all_Ms_3 <- table(predict(all_moddels_3$best.model, newdata = testdata), y.test)
@@ -511,7 +511,7 @@ B_model_2_accuracy = sum(diag(confusion_mtrx_all_Ms_2))/sum(confusion_mtrx_all_M
 B_model_3_accuracy = sum(diag(confusion_mtrx_all_Ms_3))/sum(confusion_mtrx_all_Ms_3)
 accuracy <- c(B_model_1_accuracy,B_model_2_accuracy,B_model_3_accuracy)
 print(accuracy)
-barplot(accuracy, main="Models Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue", "darkgreen"), names.arg=c("Radial", "Linear", "Polyno"),las = 2, cex.names=1)
+barplot(accuracy, main="Model Accuracy", horiz=TRUE, xlim = range(0, 1), col=c("darkred","blue", "darkgreen"), names.arg=c("Radial", "Linear", "Polyno"),las = 2, cex.names=1)
 ```
 
 
@@ -537,3 +537,7 @@ By combining the accuracies obtained from the different models on our test datas
 Logistic regression with ElasticNet regularization: 91.667%
 Bagging (Trees) : 94.44%
 SVM (Linear Kernel): 91.667%
+```{r}
+print(accuracies)
+```
+
