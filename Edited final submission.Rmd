@@ -24,7 +24,7 @@ library(e1071)
 
 ```
 
-## About the data set
+## Dataset Overview
 
     Before we dig into numbers let's first understand the data. the Golub 1999 data set consists of 47 patients with Acute Lymphoblastic Leukemia also known as (ALL) which is a type of cancer in which the bone marrow makes too many white blood cells (lymphocytes), whereas the rest of the data consists of 25 patients with acute myeloid leukemia (AML) which is another type of blood cancer. 
     
@@ -533,11 +533,10 @@ barplot(accuracies, main="Method Accuracy", horiz=TRUE, xlim = range(0, 1), col=
 ```
 
 By combining the accuracies obtained from the different models on our test dataset the below accuracies are obtained,
-
-Logistic regression with ElasticNet regularization: 91.667%
-Bagging (Trees) : 94.44%
-SVM (Linear Kernel): 91.667%
 ```{r}
 print(accuracies)
 ```
 
+Logistic regression with ElasticNet regularization: 91.667%
+Bagging (Trees) : 94.44%
+SVM (Linear Kernel): 94.44%
